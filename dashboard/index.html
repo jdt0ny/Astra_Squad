@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astra Squad - Software House Virtuale</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-hover: #222240;
+            --accent: #7c3aed;
+            --accent-light: #a78bfa;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border: #2d2d44;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-light), #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo span {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .main {
+            display: flex;
+            height: calc(100vh - 73px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .agent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .agent-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .agent-item.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .agent-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .agent-info h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .agent-info p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header-info h2 {
+            font-size: 1.1rem;
+        }
+
+        .chat-header-info p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .quick-prompts {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-prompt {
+            padding: 0.4rem 0.8rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-prompt:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            line-height: 1.6;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: white;
+        }
+
+        .message.agent {
+            align-self: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .message.agent .content {
+            white-space: pre-wrap;
+        }
+
+        .message.loading {
+            align-self: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 0.5rem 0;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .input-area {
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .input-wrapper textarea {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: none;
+            min-height: 44px;
+            max-height: 150px;
+        }
+
+        .input-wrapper textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            background: var(--accent-light);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .welcome {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome p {
+            color: var(--text-secondary);
+            max-width: 400px;
+        }
+
+        .config-bar {
+            padding: 0.75rem 2rem;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .config-bar label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .config-bar input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            width: 280px;
+        }
+
+        .config-bar input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .config-bar button {
+            padding: 0.4rem 1rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .config-bar button:hover {
+            background: var(--accent-light);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🚀</div>
+            <div>
+                <h1>Astra Squad</h1>
+                <span>Software House Virtuale</span>
+            </div>
+        </div>
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Disconnesso</span>
+        </div>
+    </header>
+
+    <div class="config-bar">
+        <label>API Endpoint:</label>
+        <input type="text" id="apiUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+        <button onclick="connect()">Connetti</button>
+    </div>
+
+    <div class="main">
+        <aside class="sidebar">
+            <h2>Il Tuo Team</h2>
+            <div class="agent-list" id="agentList">
+                <p style="color: var(--text-secondary); font-size: 0.85rem;">Clicca "Connetti" per caricare gli agenti</p>
+            </div>
+        </aside>
+
+        <section class="chat-area">
+            <div id="chatHeader" class="chat-header" style="display: none;">
+                <div class="chat-header-info">
+                    <h2 id="agentName">Seleziona un agente</h2>
+                    <p id="agentDesc">Scegli un membro del team dalla sidebar</p>
+                </div>
+                <div class="quick-prompts" id="quickPrompts"></div>
+            </div>
+
+            <div class="messages" id="messages">
+                <div class="welcome">
+                    <div class="welcome-icon">🌟</div>
+                    <h2>Benvenuto in Astra Squad</h2>
+                    <p>Connettiti all'API di AgentOS e inizia a lavorare con la tua software house virtuale.</p>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="userInput" placeholder="Scrivi un messaggio..." rows="1" disabled></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        let agents = [];
+        let selectedAgent = null;
+        let sessionId = 'session-' + Date.now();
+        let apiBase = '';
+
+        const agentIcons = {
+            'frontend-dev': '🎨',
+            'backend-dev': '⚙️',
+            'devops': '🚀',
+            'qa-engineer': '🔍',
+            'security-specialist': '🛡️',
+            'docs-writer': '📝',
+            'platform-builder': '🏗️',
+            'platform-manager': '📊',
+            'platform-engineer': '🔧',
+        };
+
+        const agentColors = {
+            'frontend-dev': '#3b82f6',
+            'backend-dev': '#22c55e',
+            'devops': '#f59e0b',
+            'qa-engineer': '#06b6d4',
+            'security-specialist': '#ef4444',
+            'docs-writer': '#8b5cf6',
+            'platform-builder': '#ec4899',
+            'platform-manager': '#14b8a6',
+            'platform-engineer': '#f97316',
+        };
+
+        function connect() {
+            apiBase = document.getElementById('apiUrl').value.replace(/\/$/, '');
+            fetchAgents();
+        }
+
+        async function fetchAgents() {
+            try {
+                const res = await fetch(`${apiBase}/agents`);
+                if (!res.ok) throw new Error('API non raggiungibile');
+                agents = await res.json();
+                renderAgents();
+                updateStatus(true);
+            } catch (err) {
+                updateStatus(false);
+                alert('Impossibile connettersi all\'API. Verifica che AgentOS sia in esecuzione.');
+            }
+        }
+
+        function updateStatus(online) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            dot.classList.toggle('online', online);
+            text.textContent = online ? 'Connesso' : 'Disconnesso';
+        }
+
+        function renderAgents() {
+            const list = document.getElementById('agentList');
+            list.innerHTML = agents.map(a => `
+                <div class="agent-item" onclick="selectAgent('${a.id}')" id="agent-${a.id}">
+                    <div class="agent-avatar" style="background: ${agentColors[a.id] || '#666'}20; color: ${agentColors[a.id] || '#666'}">
+                        ${agentIcons[a.id] || '🤖'}
+                    </div>
+                    <div class="agent-info">
+                        <h3>${a.name}</h3>
+                        <p>${a.id}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('userInput').disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+        }
+
+        function selectAgent(id) {
+            selectedAgent = agents.find(a => a.id === id);
+            if (!selectedAgent) return;
+
+            document.querySelectorAll('.agent-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`agent-${id}`).classList.add('active');
+
+            document.getElementById('chatHeader').style.display = 'flex';
+            document.getElementById('agentName').textContent = selectedAgent.name;
+            document.getElementById('agentDesc').textContent = selectedAgent.id;
+
+            const prompts = document.getElementById('quickPrompts');
+            const config = getConfigForAgent(id);
+            prompts.innerHTML = config.prompts.map(p =>
+                `<div class="quick-prompt" onclick="usePrompt('${p.replace(/'/g, "\\'")}')">${p}</div>`
+            ).join('');
+
+            document.getElementById('messages').innerHTML = `
+                <div class="welcome">
+                    <div class="welcome-icon">${agentIcons[id] || '🤖'}</div>
+                    <h2>${selectedAgent.name}</h2>
+                    <p>${config.description}</p>
+                </div>
+            `;
+
+            document.getElementById('userInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('userInput').focus();
+        }
+
+        function getConfigForAgent(id) {
+            const configs = {
+                'frontend-dev': {
+                    description: 'Specialista frontend: React, Vue, CSS, UI/UX, responsive design e performance.',
+                    prompts: ['Recensisci questo componente React', 'Come strutturare il progetto?', 'Miglioramenti per mobile']
+                },
+                'backend-dev': {
+                    description: 'Specialista backend: API Python, database, autenticazione e architettura scalabile.',
+                    prompts: ['Progetta una REST API', 'Schema database consigliato', 'Recensisci questo endpoint']
+                },
+                'devops': {
+                    description: 'Specialista infrastrutture: Docker, CI/CD, deploy, monitoring e cloud.',
+                    prompts: ['Scrivi un Dockerfile', 'Pipeline CI/CD GitHub Actions', 'Monitoraggio produzione']
+                },
+                'qa-engineer': {
+                    description: 'Quality assurance: test strategy, test unitari/E2E, bug tracking e automazione.',
+                    prompts: ['Scrivi test pytest', 'Test strategy per nuova feature', 'Come testare questa API?']
+                },
+                'security-specialist': {
+                    description: 'Esperto di sicurezza: vulnerabilità, secure coding, autenticazione e compliance.',
+                    prompts: ['Recensione sicurezza codice', 'JWT authentication sicura', 'Dipendenze con CVE?']
+                },
+                'docs-writer': {
+                    description: 'Documentazione tecnica: README, API docs, guide architetturali e onboarding.',
+                    prompts: ['Scrivi un README', 'Documentazione API', 'Guida onboarding sviluppatore']
+                },
+                'platform-builder': {
+                    description: 'Costruisce agenti, team e workflow attraverso lo Studio.',
+                    prompts: ['Cosa puoi costruire?', 'Crea un agente per...', 'Mostra i componenti']
+                },
+                'platform-manager': {
+                    description: 'Monitora la piattaforma: usage, token, run, eval e schedule.',
+                    prompts: ['Stato della piattaforma?', 'Metriche ultimi 7 giorni', 'Agenti piu lenti?']
+                },
+                'platform-engineer': {
+                    description: 'Risponde domande sul codice sorgente e genera handoff per coding agent.',
+                    prompts: ['Come funziona il learning?', 'Come funziona MCP?', 'Struttura del progetto']
+                },
+            };
+            return configs[id] || { description: selectedAgent?.name || '', prompts: [] };
+        }
+
+        function usePrompt(text) {
+            document.getElementById('userInput').value = text;
+            sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const msg = input.value.trim();
+            if (!msg || !selectedAgent) return;
+
+            input.value = '';
+            appendMessage(msg, 'user');
+
+            const loadingId = appendLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('message', msg);
+                formData.append('user_id', 'dashboard-user');
+                formData.append('stream', 'false');
+
+                const res = await fetch(`${apiBase}/agents/${selectedAgent.id}/runs`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                removeLoading(loadingId);
+                appendMessage(data.content || data.response || 'Risposta vuota.', 'agent');
+            } catch (err) {
+                removeLoading(loadingId);
+                appendMessage(`Errore: ${err.message}`, 'agent');
+            }
+        }
+
+        function appendMessage(text, type) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = type === 'agent' ? `<div class="content">${escapeHtml(text)}</div>` : escapeHtml(text);
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendLoading() {
+            const container = document.getElementById('messages');
+            const id = 'loading-' + Date.now();
+            const div = document.createElement('div');
+            div.className = 'message loading';
+            div.id = id;
+            div.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeLoading(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.getElementById('userInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        document.getElementById('userInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+
+        // Auto-connect on load
+        window.addEventListener('load', () => {
+            if (apiBase) connect();
+        });
+    </script>
+</body>
+</html>
