@@ -1,7 +1,9 @@
 """
-Backend Developer
+Sviluppatore Backend
 =================
 """
+
+from __future__ import annotations
 
 from agno.agent import Agent
 from agno.tools.calculator import CalculatorTools

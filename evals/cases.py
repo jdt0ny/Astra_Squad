@@ -1,26 +1,31 @@
 """
-Eval Cases
-==========
+Casi delle Eval
+===============
 
-Each case is an `agno.eval.Case`
+Ogni caso è un `agno.eval.Case`
 
-- When `criteria` is set, `AgentAsJudgeEval` scores the response (binary pass/fail) using an LLM.
-- When `expected_tool_calls` is set, `ReliabilityEval` checks if `expected_tool_calls` were fired.
+- Quando `criteria` è impostato, `AgentAsJudgeEval` valuta la risposta
+  (pass/fail binario) usando un LLM.
+- Quando `expected_tool_calls` è impostato, `ReliabilityEval` controlla se
+  gli `expected_tool_calls` sono stati eseguiti.
 
-Two rules when adding a case (machinery and guards: `evals/hooks.py`):
+Due regole quando si aggiunge un caso (meccanica e protezioni: `evals/hooks.py`):
 
-- Hooks: add `**BUILDER_HOOKS` on any case that can reach the builder's ungated
-  create/edit/publish tools; add `**LEARNING_HOOKS` on every other case probing a
-  learning-store component (`agno`, `platform-manager`, `platform-engineer`). The
-  teardown hard-deletes what the case created, even on timeout.
-- Fixtures: use names no real team would have on file — the sweep removes rows the
-  case created, but cannot undo an edit inside a row that already existed.
+- Hook: aggiungi `**BUILDER_HOOKS` su qualsiasi caso che può raggiungere gli strumenti di
+  creazione/modifica/pubblicazione senza blocco del builder; aggiungi `**LEARNING_HOOKS` su ogni
+  altro caso che esplora un componente con archivio di apprendimento
+  (`agno`, `platform-manager`, `platform-engineer`). Il teardown elimina definitivamente ciò che
+  il caso ha creato, anche in caso di timeout.
+- Fixtures: usa nomi che nessun vero team avrebbe archiviato — lo sweep rimuove le righe che
+  il caso ha creato, ma non può annullare una modifica dentro una riga già esistente.
 
-Results are stored in Postgres via `eval_db` and are visible at os.agno.com.
+I risultati sono memorizzati in Postgres tramite `eval_db` e sono visibili su os.agno.com.
 
-Add a case below, tag it (`smoke`, `release`, `live`), then run:
+Aggiungi un caso qui sotto, etichettalo (`smoke`, `release`, `live`), poi esegui:
 `python -m evals --tag <tag>`
 """
+
+from __future__ import annotations
 
 from os import getenv
 

@@ -1,7 +1,9 @@
 """
-Platform Tools
-==============
+Strumenti della Piattaforma
+============================
 """
+
+from __future__ import annotations
 
 from os import getenv
 
@@ -36,10 +38,10 @@ def get_parallel_tools() -> list[ParallelTools | MCPTools]:
 
 
 def get_slack_tools() -> list[SlackTools]:
-    """Send-scoped Slack toolkit, only when the Slack interface is configured.
+    """Toolkit Slack con scope di invio, solo quando l'interfaccia Slack è configurata.
 
-    Deliberately narrower than the SlackTools defaults: a registry any agent
-    can draw from gets post + channel listing, never history reads or file transfer.
+    Deliberatamente più ristretto delle impostazioni predefinite di SlackTools: un registro da cui qualsiasi agno
+    può attingere ottiene invio messaggi + elenco canali, mai letture della cronologia o trasferimento file.
     """
     if not getenv("SLACK_BOT_TOKEN"):
         return []
@@ -57,12 +59,12 @@ def get_slack_tools() -> list[SlackTools]:
 
 
 def get_media_tools() -> list[OpenAITools]:
-    """Image generation and text-to-speech on the platform's existing OpenAI key.
+    """Generazione immagini e testo-a-vocalizzazione sulla chiave OpenAI esistente della piattaforma.
 
-    Generated media come back as run artifacts (bytes on the RunResponse), so they
-    persist in Postgres and survive ephemeral container filesystems. Transcription
-    stays off: transcribe_audio reads server-local file paths, which agents on this
-    platform never have.
+    I media generati tornano come artifact di esecuzione (byte sulla RunResponse), quindi
+    persistono in Postgres e sopravvivono ai filesystem effimeri dei container. La trascrizione
+    è disabilitata: transcribe_audio legge percorsi di file locali al server, che gli agenti di questa
+    piattaforma non hanno mai.
     """
     # OpenAITools raises without the key; the registry import must not.
     if not getenv("OPENAI_API_KEY"):
@@ -71,10 +73,10 @@ def get_media_tools() -> list[OpenAITools]:
 
 
 def get_file_generation_tools() -> list[FileGenerationTools]:
-    """Downloadable files (JSON, CSV, TXT, HTML, code) as in-memory run artifacts."""
+    """File scaricabili (JSON, CSV, TXT, HTML, codice) come artifact di esecuzione in memoria."""
     return [FileGenerationTools(enable_pdf_generation=False, enable_docx_generation=False)]
 
 
 def get_knowledge_management_tools() -> KnowledgeManagementTools:
-    """The write side of the product knowledge base, mounted on Platform Builder."""
+    """Il lato di scrittura della knowledge base di prodotto, montato su Platform Builder."""
     return KnowledgeManagementTools(knowledge=product_knowledge)

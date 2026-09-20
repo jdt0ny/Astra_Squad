@@ -1,0 +1,45 @@
+# Caddyfile — reverse proxy for AgentOS in production.
+#
+# Usage:
+#   Set CADDY_DOMAIN in .env (e.g. "agentos.example.com" or ":443" for localhost).
+#   Then: docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+#
+# Caddy handles TLS automatically (Let's Encrypt for real domains, self-signed for bare IPs).
+# For a tunnel (cloudflared, ngrok), set CADDY_DOMAIN to ":443" and point the tunnel at localhost.
+
+{$CADDY_DOMAIN:localhost} {
+    reverse_proxy agentos-api:8000 {
+        # Pass real client IP
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+
+        # Timeouts
+        transport http {
+            read_timeout  300s
+            write_timeout 300s
+        }
+    }
+
+    # WebSocket support for MCP streamable HTTP / SSE
+    @sse {
+        header Connection *Upgrade*
+        header Upgrade    websocket
+    }
+    reverse_proxy @sse agentos-api:8000
+
+    # Security headers
+    header {
+        X-Content-Type-Options    nosniff
+        X-Frame-Options           DENY
+        Referrer-Policy           strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+
+    # Request logging
+    log {
+        output stdout
+        format json
+    }
+}

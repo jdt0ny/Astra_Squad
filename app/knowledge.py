@@ -1,13 +1,15 @@
 """
-Platform Knowledge
-==================
+Knowledge della Piattaforma
+============================
 
-Two PgVector knowledge bases available to the platform components:
+Due basi di conoscenza PgVector disponibili per i componenti della piattaforma:
 
-- shared-knowledge: a shared knowledge base that can be used by any component.
-  Load documents through the AgentOS UI or the `/knowledge` API.
-- product-knowledge: a dedicated knowledge base for product agents.
+- shared-knowledge: una base di conoscenza condivisa che può essere utilizzata da qualsiasi componente.
+  Carica documenti tramite l'interfaccia AgentOS o l'API `/knowledge`.
+- product-knowledge: una base di conoscenza dedicata per gli agenti di prodotto.
 """
+
+from __future__ import annotations
 
 from agno.knowledge import Knowledge
 

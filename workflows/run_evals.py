@@ -1,9 +1,11 @@
 """
-Run Evals
-=========
+Esecuzione delle Eval
+=====================
 
-Workflow that runs a tagged subset of the eval suite and returns a compact report.
+Workflow che esegue un sottoinsieme taggato della suite eval e restituisce un rapporto compatto.
 """
+
+from __future__ import annotations
 
 import asyncio
 from os import getenv
@@ -28,18 +30,18 @@ def _int_env(name: str, default: int) -> int:
 
 
 def _suite_timeout(selected: list, case_timeout: int) -> int:
-    """The whole-suite ceiling, derived from the cases the tag actually selects.
+    """Il limite dell'intera suite, derivato dai casi che il tag seleziona effettivamente.
 
-    The per-case clock is the real limit; this one exists only to stop a run wedged
-    *outside* it, because agno runs each case's setup and teardown outside the
-    asyncio.wait_for that bounds the case. So the ceiling must never be tighter than the
-    ceilings it contains — a fixed default cannot promise that. The old 900s already sat
-    below the `release` tag's summed 1170s, and every case a user adds through
-    /create-evals moves the number again; deriving it means the suite clock can only ever
-    fire on something genuinely stuck.
+    L'orologio per caso è il limite reale; questo esiste solo per fermare un'esecuzione bloccata
+    *al di fuori* di esso, perché agno esegue setup e teardown di ogni caso al di fuori dell'
+    asyncio.wait_for che delimita il caso. Quindi il limite non deve mai essere più rigido dei
+    limiti che contiene — un default fisso non può garantirlo. Il vecchio 900s era già
+    sotto i 1170s sommati del tag `release`, e ogni caso che un utente aggiunge tramite
+    /create-evals sposta di nuovo il numero; derivarlo significa che l'orologio della suite può solo
+    scattare su qualcosa di genuinamente bloccato.
 
-    EVALS_SUITE_TIMEOUT_SECONDS still wins when set: an operator capping an unattended
-    run's spend is making a different, deliberate trade.
+    EVALS_SUITE_TIMEOUT_SECONDS prevale ancora quando impostato: un operatore che limita la spesa
+    di un'esecuzione non supervisionata sta facendo una scelta diversa e deliberata.
     """
     override = _int_env("EVALS_SUITE_TIMEOUT_SECONDS", 0)
     if override > 0:
@@ -54,21 +56,21 @@ def _suite_timeout(selected: list, case_timeout: int) -> int:
 
 
 def _one_line(text: str, limit: int = 400) -> str:
-    """A judge verdict as one report line — reasons are prose and the report is a list."""
+    """Un verdetto del giudice come singola riga di rapporto — le motivazioni sono prosa e il rapporto è un elenco."""
     collapsed = " ".join(str(text).split())
     return collapsed if len(collapsed) <= limit else collapsed[: limit - 1] + "…"
 
 
 def _failure_reasons(case: dict) -> list[str]:
-    """Why a case failed, from the payload alone.
+    """Perché un caso è fallito, solo dal payload.
 
-    `error` covers a run that broke, a judge that errored, a timeout, a teardown that
-    refused — but a judged *verdict* is not an error, so a case the judge simply said no
-    to carries `error=None` and its reason nowhere else in this path. The console runner
-    prints that verdict; a scheduled run has no console, which makes this the only place
-    anyone ever reads it. Same blind spot for a scorer. A reliability failure has no
-    reason field at all, so the tools the run actually fired are the evidence to print
-    against the expectation that missed.
+    `error` copre un'esecuzione che si è rotta, un giudice che ha dato errore, un timeout, un teardown
+    che ha rifiutato — ma un *verdetto* del giudice non è un errore, quindi un caso a cui il giudice ha
+    semplicemente detto no porta `error=None` e la sua motivazione non è da nessuna'altra parte in questo percorso.
+    Il runner della console stampa quel verdetto; un'esecuzione programmata non ha console, il che rende questo
+    l'unico posto in cui qualcuno lo legge mai. Stessa cecità per uno scorer. Un fallimento di affidabilità non ha
+    affatto un campo motivo, quindi gli strumenti che l'esecuzione ha effettivamente eseguito sono le prove da
+    stampare contro l'aspettativa mancata.
     """
     reasons: list[str] = []
     if case.get("error"):
@@ -109,10 +111,10 @@ def _format_summary(payload: dict) -> str:
 
 
 def _format_timeout(payload: dict, *, tag: str, limit: int, selected: int, stuck: str | None) -> str:
-    """The suite ran out of clock — report what finished rather than only that it did.
+    """La suite ha esaurito il tempo — rporta cosa è terminato invece di solo che lo è.
 
-    Discarding the partial results makes one hung case indistinguishable from a suite
-    that never worked, which is the opposite of what an unattended run needs to say.
+    Scartare i risultati parziali rende un caso bloccato indistinguibile da una suite
+    che non ha mai funzionato, che è l'opposto di ciò che un'esecuzione non supervisionata deve dire.
     """
     summary = payload.get("summary", {})
     stalled = f", with `{stuck}` still running" if stuck else ""
@@ -129,7 +131,7 @@ def _format_timeout(payload: dict, *, tag: str, limit: int, selected: int, stuck
 
 
 async def run_evals_step(_step_input: StepInput) -> StepOutput:
-    """Run the configured eval tag in-process and return a markdown summary."""
+    """Esegue il tag eval configurato in-process e restituisce un riepilogo markdown."""
     # Imported lazily so the eval suite only loads when the workflow actually runs.
     from agno.eval import SuiteResult, arun_cases
 

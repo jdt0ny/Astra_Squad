@@ -1,7 +1,9 @@
 """
-QA Engineer
+Ingegnere QA
 ===========
 """
+
+from __future__ import annotations
 
 from agno.agent import Agent
 from agno.tools.mcp import MCPTools

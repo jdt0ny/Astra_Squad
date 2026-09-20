@@ -1,7 +1,9 @@
 """
-Platform Manager
+Gestore di Piattaforma
 ================
 """
+
+from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
@@ -25,17 +27,17 @@ _MAX_REPORTS = 20
 
 
 def _iso(timestamp: Any) -> Any:
-    """Epoch seconds → ISO 8601 UTC; anything else passes through untouched."""
+    """Secondi epoch → ISO 8601 UTC; qualsiasi altro valore passa inalterato."""
     if isinstance(timestamp, (int, float)):
         return datetime.fromtimestamp(timestamp, tz=UTC).isoformat()
     return timestamp
 
 
 def _step_errors(step_results: Any) -> list[str]:
-    """Executor errors recorded on a workflow run's step outputs.
+    """Errori dell'esecutore registrati negli output delle fasi di un'esecuzione workflow.
 
-    `step_results` holds StepOutput objects, or a list of them per parallel step, so
-    flatten one level before reading `error` off each.
+    `step_results` contiene oggetti StepOutput, o una lista di essi per fase parallela,
+    quindi appiattisci di un livello prima di leggere `error` da ciascuno.
     """
     errors: list[str] = []
     for result in step_results or []:
@@ -47,11 +49,11 @@ def _step_errors(step_results: Any) -> list[str]:
 
 
 def get_deployment_check_report(limit: int = 3) -> str:
-    """The latest deployment-check reports: readiness of DB, auth, scheduler URL, MCP
-    reachability, Slack, schedule state, and component imports.
+    """Gli ultimi report di deployment-check: stato di pronto del DB, autenticazione, URL dello scheduler,
+    raggiungibilità MCP, Slack, stato degli schedule e import dei componenti.
 
     Args:
-        limit: How many reports to return, newest first. Clamped to 1-20.
+        limit: Quanti report restituire, i più recenti prima. Limitato a 1-20.
     """
     limit = max(1, min(limit, _MAX_REPORTS))
     # `limit` bounds sessions here, reports at the return. Each scheduled or on-demand
@@ -96,16 +98,16 @@ def get_deployment_check_report(limit: int = 3) -> str:
 
 
 async def run_deployment_check() -> str:
-    """Run the deployment-check workflow now and return the fresh readiness report.
+    """Esegue ora il workflow deployment-check e restituisce il report di pronto aggiornato.
 
-    A diagnostic, not a mutation: deterministic, free (no model calls), and idempotent —
-    it observes DB connectivity, auth config, scheduler URL, MCP reachability, Slack env,
-    schedule state, and component imports. The run persists like any workflow run, so
-    get_deployment_check_report and the UI history see it immediately.
+    Una diagnosi, non una mutazione: deterministica, gratuita (nessuna chiamata a modello) e idempotente —
+    osserva la connettività del DB, la configurazione di auth, l'URL dello scheduler, la raggiungibilità MCP,
+    l'ambiente Slack, lo stato degli schedule e gli import dei componenti. L'esecuzione persiste come qualsiasi
+    esecuzione workflow, quindi get_deployment_check_report e la cronologia UI la vedono immediatamente.
 
-    Returns JSON: `run_status`, the `report`, and `step_errors` when the check itself broke.
-    A run_status other than COMPLETED, or any step_errors, means no readiness verdict was
-    reached — report the broken check, not a clean bill of health.
+    Restituisce JSON: `run_status`, il `report` e `step_errors` quando il check stesso si è interrotto.
+    Un run_status diverso da COMPLETED, o qualsiasi step_errors, significa che non è stato raggiunto
+    nessun verdetto di pronto — riporta il check interrotto, non una dichiarazione di idoneità.
     """
     # Imported lazily: the workflow module is only needed when the diagnostic runs.
     from workflows.deployment_check import deployment_check

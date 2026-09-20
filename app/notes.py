@@ -1,9 +1,11 @@
 """
-Shared Notes
-============
+Note Condivise
+==============
 
-A shared notebook for the platform's components
+Un quaderno condiviso per i componenti della piattaforma
 """
+
+from __future__ import annotations
 
 from agno.fs import FileSystem
 from agno.tools import Toolkit
@@ -15,24 +17,25 @@ NOTES_NAMESPACE = "shared-notes"
 notes = FileSystem(get_postgres_db(), namespace=NOTES_NAMESPACE)
 
 SHARED_NOTES_INSTRUCTIONS = """\
-The shared notebook is how this platform remembers things across people and \
-components. Read it before you answer a question about what the team has \
-decided, and file what you learn so the next reader does not have to redo your \
-work. Everyone on the platform can read it, so file the finding and the \
-reasoning behind it — a link and a distilled takeaway, never a pasted payload. \
-Group related notes in a directory and give each a dated or subject path; keep \
-your own working files (seen lists, checkpoints) in a directory named after you, \
-one record per line, and pass that directory to check_lines and list_files so \
-another component's notes never answer for yours. Notes are appended to, never \
-replaced: append_file creates a note or adds to it.\
+Il quaderno condiviso è il modo in cui questa piattaforma ricorda le cose tra \
+persone e componenti. Leggilo prima di rispondere a una domanda su cosa ha \
+deciso il team, e archivia ciò che impari così il prossimo lettore non dovrà \
+rifare il tuo lavoro. Chiunque sulla piattaforma può leggerlo, quindi archivia \
+la scoperta e il ragionamento che ci sta dietro — un link e un riassunto \
+distillato, mai un payload incollato. Raggruppa le note correlate in una \
+directory e assegna a ciascuna un percorso datato o per soggetto; tieni i tuoi \
+file di lavoro (liste visti, checkpoint) in una directory intitolata come te, \
+un record per riga, e passa quella directory a check_lines e list_files così \
+le note di un altro componente non rispondono al posto delle tue. Le note vengono \
+sempre aggiunte, mai sostituite: append_file crea una nota o vi aggiunge qualcosa.\
 """
 
 
 def get_shared_notes_tools() -> list[Toolkit]:
-    """The shared notebook for built components: read, append, list, search, check.
+    """Il quaderno condiviso per i componenti costruiti: leggi, aggiungi, elenca, cerca, controlla.
 
-    No write, replace, move, or delete: those retire a colleague's work and stay
-    with Agno, which carries the full toolkit.
+    Nessuna scrittura, sostituzione, spostamento o eliminazione: queste operazioni
+    ritirano il lavoro di un collega e restano ad Agno, che possiede il toolkit completo.
     """
     return [
         notes.tools(

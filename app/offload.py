@@ -1,15 +1,17 @@
 """
-Result Offloading
-=========================
+Scaricamento dei Risultati
+===========================
 
-Offload big tool results to a database instead of the context window.
+Scarica i grandi risultati degli strumenti su un database invece che sulla finestra di contesto.
 
-A tool that returns a whole web page, a whole source file, or a whole metrics
-payload costs that much context on every later turn of the session. Offloading
-writes anything past the threshold to a database and leaves a short envelope
-in the transcript — a preview, the size, and a `result_id` — then hands the
-component `search_result` and `read_result` to go back for the parts it needs.
+Uno strumento che restituisce un'intera pagina web, un intero file sorgente o un intero payload
+di metriche costa altrettanto contesto ad ogni turno successivo della sessione. Lo scaricamento
+scrive qualsiasi cosa oltre la soglia su un database e lascia un breve involucro
+nella trascrizione — un'anteprima, la dimensione e un `result_id` — poi passa al
+componente `search_result` e `read_result` per tornare sulle parti di cui ha bisogno.
 """
+
+from __future__ import annotations
 
 from agno.offload import ResultStore
 

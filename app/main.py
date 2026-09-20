@@ -1,8 +1,12 @@
 """
-AgentOS Entrypoint
+Entrypoint AgentOS
 ==================
 """
 
+from __future__ import annotations
+
+import logging
+import sys
 from contextlib import asynccontextmanager
 from os import getenv
 from pathlib import Path
@@ -10,6 +14,22 @@ from pathlib import Path
 from agno.os import AgentOS, MCPConfig
 from agno.os.config import AuthorizationConfig
 from agno.utils.log import log_info
+from fastapi import Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+
+# ---------------------------------------------------------------------------
+# Structured logging — LOG_LEVEL env var controls verbosity.
+# ---------------------------------------------------------------------------
+log_level = getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+    stream=sys.stdout,
+    force=True,
+)
+logger = logging.getLogger("agentos")
 
 from agents.backend_dev import backend_dev
 from agents.builder import platform_builder
@@ -84,12 +104,37 @@ if MCP_CONNECT_SECRET:
 @asynccontextmanager
 async def lifespan(app):  # type: ignore[no-untyped-def]
     log_info("AgentOS lifespan: startup")
+    logger.info("AgentOS starting — runtime=%s, log_level=%s", runtime_env, log_level)
     # Register schedules on startup. Idempotent and fail-soft.
     register_schedules()
     try:
         yield
     finally:
         log_info("AgentOS lifespan: shutdown")
+        logger.info("AgentOS shutting down")
+
+
+# ---------------------------------------------------------------------------
+# Request timeout middleware — drops requests that exceed the limit.
+# Override via REQUEST_TIMEOUT_SECONDS env var (default: 300).
+# ---------------------------------------------------------------------------
+REQUEST_TIMEOUT = int(getenv("REQUEST_TIMEOUT_SECONDS", "300"))
+
+
+class TimeoutMiddleware(BaseHTTPMiddleware):
+    """Annulla le richieste che superano il timeout."""
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> JSONResponse:
+        import asyncio
+
+        try:
+            return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT)
+        except TimeoutError:
+            logger.warning("Request timed out: %s %s", request.method, request.url.path)
+            return JSONResponse(
+                status_code=504,
+                content={"error": "Gateway Timeout", "detail": f"Request exceeded {REQUEST_TIMEOUT}s limit."},
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +182,39 @@ agent_os = AgentOS(
     config=str(Path(__file__).parent / "config.yaml"),
 )
 app = agent_os.get_app()
+
+# ---------------------------------------------------------------------------
+# Middleware — applied after the app is created.
+# Order matters: TimeoutMiddleware wraps everything, then CORS.
+# ---------------------------------------------------------------------------
+app.add_middleware(TimeoutMiddleware)
+
+# CORS — allow origins from CORS_ORIGINS env var (comma-separated), or
+# disable in dev. In production behind Caddy, this is mostly for the MCP
+# streamable HTTP transport and the AgentOS UI.
+cors_origins = getenv("CORS_ORIGINS", "").split(",") if getenv("CORS_ORIGINS") else ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ---------------------------------------------------------------------------
+# Global error handler — structured JSON for unhandled exceptions.
+# ---------------------------------------------------------------------------
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled exception: %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "detail": str(exc) if runtime_env == "dev" else "An unexpected error occurred.",
+        },
+    )
 
 
 if __name__ == "__main__":

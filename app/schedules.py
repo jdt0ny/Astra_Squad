@@ -1,7 +1,9 @@
 """
-AgentOS Schedules
-==================
+Programmi AgentOS
+=================
 """
+
+from __future__ import annotations
 
 from os import getenv
 from typing import Any
@@ -17,7 +19,7 @@ _MAX_SCHEDULE_PAGES = 50
 
 
 def env_flag(name: str, default: bool) -> bool:
-    """Read a boolean env var, accepting 1/true/yes (any casing) as true."""
+    """Legge una variabile d'ambiente booleana, accettando 1/true/yes (qualsiasi maiuscolo/minuscolo) come vero."""
     value = getenv(name)
     if value is None:
         return default
@@ -35,11 +37,11 @@ def _register(
     preexisting: bool,
     enabled: bool = True,
 ) -> None:
-    """Create or update a schedule; failures log a warning instead of crashing the app.
+    """Crea o aggiorna un programma; gli errori registrano un avviso invece di bloccare l'app.
 
-    ``preexisting`` must be decided from a listing taken before the create call:
-    create(if_exists="update") stamps updated_at on every boot, so the row itself
-    cannot tell a fresh insert from a refresh.
+    ``preexisting`` deve essere deciso da un elenco ottenuto prima della chiamata di creazione:
+    create(if_exists="update") aggiorna updated_at ad ogni avvio, quindi la riga stessa
+    non può distinguere un inserimento fresco da un aggiornamento.
     """
     try:
         schedule = manager.create(
@@ -85,7 +87,7 @@ def _platform_schedules(manager: ScheduleManager) -> dict[str, Schedule]:
 
 
 def _sync_enabled(manager: ScheduleManager, row: Schedule | None, *, enabled: bool) -> None:
-    """Point an existing schedule's toggle at the desired state (idempotent)."""
+    """Indica l'interruttore di un programma esistente sullo stato desiderato (idempotente)."""
     if row is None or row.enabled == enabled:
         return
     try:
@@ -99,12 +101,12 @@ def _sync_enabled(manager: ScheduleManager, row: Schedule | None, *, enabled: bo
 
 
 def register_schedules() -> None:
-    """Register schedules (idempotent and fail-soft).
+    """Registra i programmi (idempotente e tollerante agli errori).
 
-    The deployment check runs daily by default; ENABLE_DEPLOY_CHECK owns its
-    toggle and re-asserts it on every boot, in both directions. Run-evals is
-    registered but ships disabled because it uses model calls — its toggle
-    belongs to the AgentOS UI and boot never overrides it.
+    Il deployment check viene eseguito giornalmente per impostazione predefinita; ENABLE_DEPLOY_CHECK gestisce il suo
+    interruttore e lo riafferma ad ogni avvio, in entrambe le direzioni. Run-evals è
+    registrato ma parte disabilitato perché usa chiamate al modello — il suo interruttore
+    appartiene all'interfaccia AgentOS e l'avvio non lo sovrascrive mai.
     """
     if getenv("ENABLE_SCHEDULED_EVALS") is not None:
         log_warning(

@@ -10,6 +10,8 @@ authors = [{ name = "Agno", email = "hello@agno.com" }]
 dependencies = [
   "agno[os,mcp,slack,pgvector,psycopg,csv,excel,docx,pdf,website]==3.0.4",
   "cel-python",
+  "groq",
+  "ollama>=0.6.2",
   "openai",
   "parallel-web",
   "python-dotenv",
@@ -36,6 +38,7 @@ select = ["E", "F", "I", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
+"app/main.py" = ["E402"]
 
 [tool.mypy]
 check_untyped_defs = true

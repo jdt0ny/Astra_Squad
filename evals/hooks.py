@@ -1,24 +1,26 @@
 """
-Eval Hooks
-==========
+Hook delle Eval
+===============
 
-The setup/teardown machinery behind `evals/cases.py`: pre-case snapshots and
-post-case sweeps of Studio components, schedules, learning rows, and notes.
-Capture and create/edit/publish are ungated, so a case's rows really land in
-the shared stores — these hooks remove what the case created, and refuse
-rather than guess when a snapshot looks incomplete.
+La meccanica di setup/teardown dietro `evals/cases.py`: snapshot pre-caso e
+sweep post-caso dei componenti Studio, schedule, righe di apprendimento e note.
+La cattura e la creazione/modifica/pubblicazione non sono bloccate, quindi le righe
+di un caso atterrano veramente negli archivi condivisi — questi hook rimuovono ciò che
+il caso ha creato, e rifiutano invece di indovinare quando uno snapshot sembra incompleto.
 
-Cases take the ready-made pairs:
+I casi usano le coppie pronte:
 
-- `**BUILDER_HOOKS` — any case whose component can reach the builder's ungated
-  create/edit/publish tools: every `platform-builder` case, and any `agno` case
-  one delegation away from a build. Sweeps components, schedules, and learnings.
-- `**LEARNING_HOOKS` — every other case probing a learning-store component
-  (`agno`, `platform-manager`, `platform-engineer`). Sweeps entities, memories,
-  profiles, and notes.
+- `**BUILDER_HOOKS` — qualsiasi caso il cui componente può raggiungere gli strumenti
+  di creazione/modifica/pubblicazione senza blocco del builder: ogni caso `platform-builder`,
+  e qualsiasi caso `agno` a una delega dalla creazione. Pulisce componenti, schedule e apprendimenti.
+- `**LEARNING_HOOKS` — ogni altro caso che esplora un componente con archivio di apprendimento
+  (`agno`, `platform-manager`, `platform-engineer`). Pulisce entità, memorie,
+  profili e note.
 
-The builder pair is a strict superset, so upgrading a borderline case is safe.
+La coppia del builder è un superinsieme rigoroso, quindi promuovere un caso borderline è sicuro.
 """
+
+from __future__ import annotations
 
 import asyncio
 import time
@@ -38,30 +40,30 @@ _COMMIT_GRACE_SECONDS = 10
 
 
 async def _let_inflight_writes_land(result: CaseResult) -> None:
-    """Wait out an in-flight write before sweeping, whenever the run was cut short.
+    """Attende che una scrittura in corso sia completata prima dello sweep, quando l'esecuzione è stata interrotta.
 
-    The cost is a pause on abort — Ctrl-C during a builder case takes this long to quit —
-    and it buys back the leak that pause prevents: a published component nobody swept, or
-    a case-created schedule that then fires daily."""
+    Il costo è una pausa all'abort — Ctrl-C durante un caso del builder richiede questo tempo per uscire —
+    e compensa la perdita che la pausa previene: un componente pubblicato che nessuno ha pulito, o
+    uno schedule creato dal caso che poi scatta quotidianamente."""
     if result.response is not None and result.response.status == RunStatus.completed:
         return
     await asyncio.sleep(_COMMIT_GRACE_SECONDS)
 
 
 def snapshot_component_ids() -> set[str]:
-    """`setup` hook for Studio-builder cases: Studio component ids present before
-    the case runs. The runner passes the returned set to the teardown as context.
-    Tombstones are included so a pre-existing archived component never reads as
-    new to the diff (the sweep would hard-delete it)."""
+    """Hook di `setup` per i casi Studio-builder: gli id dei componenti Studio presenti prima
+    dell'esecuzione del caso. Il runner passa l'insieme restituito al teardown come contesto.
+    Le lapidi sono incluse così che un componente archiviato preesistente non venga mai letto
+    come nuovo nella differenza (lo sweep lo eliminerebbe definitivamente)."""
     components, _ = eval_db.list_components(limit=1000, include_deleted=True)
     return {component["component_id"] for component in components}
 
 
 def delete_new_components(pre_run_ids: set[str]) -> None:
-    """Hard-deletes only components that did not exist before the case ran — a
-    user's own components are never touched, whatever the eval run happened to
-    name its creations. Also used standalone by the improve-agent skill to
-    bracket probe loops against Studio-builder agents."""
+    """Elimina definitivamente solo i componenti che non esistevano prima dell'esecuzione del caso —
+    i componenti propri dell'utente non vengono mai toccati, qualunque sia il nome che l'esecuzione
+    eval ha dato alle sue creazioni. Usato anche autonomamente dalla skill improve-agent per
+    delimitare i cicli di sonda contro gli agenti Studio-builder."""
     # include_deleted: a component the case created and then archived would
     # otherwise vanish from the listing and leak its tombstone. Workflows and
     # teams go before agents so dependent tracking never refuses a member's
@@ -75,25 +77,26 @@ def delete_new_components(pre_run_ids: set[str]) -> None:
 
 
 async def cleanup_new_components(pre_run_ids: set[str], result: CaseResult) -> None:
-    """`teardown` hook for cases whose run may create Studio components (create/edit/
-    publish are ungated, so components really land in the DB). The runner invokes it
-    on pass, fail, error, and timeout alike, with the `setup` snapshot as context."""
+    """Hook di `teardown` per i casi la cui esecuzione può creare componenti Studio (creazione/
+    modifica/pubblicazione non sono bloccate, quindi i componenti atterrano veramente nel DB).
+    Il runner lo invoca su pass, fail, error e timeout allo stesso modo, con lo snapshot di
+    `setup` come contesto."""
     await _let_inflight_writes_land(result)
     await asyncio.to_thread(delete_new_components, pre_run_ids)
 
 
 def snapshot_learning_state() -> dict[str, set[str]]:
-    """`setup` hook for cases probing a component with learning stores (agno,
-    platform-builder, platform-manager, platform-engineer): the learning ids (entities,
-    profiles, memories) and note paths present before the case runs, so the teardown
-    can delete only what the case created.
+    """Hook di `setup` per i casi che esplorano un componente con archivi di apprendimento (agno,
+    platform-builder, platform-manager, platform-engineer): gli id di apprendimento (entità,
+    profili, memorie) e i percorsi delle note presenti prima dell'esecuzione del caso, così il teardown
+    può eliminare solo ciò che il caso ha creato.
 
-    `taken_at` is the cutoff the teardown's refusal rests on: epoch seconds, the same
-    clock and the same truncation the learnings table's own `created_at` is written with
-    (`int(time.time())`, in the process that runs the agent — the eval runner's own, in
-    both sanctioned paths). It rides in a one-element set so the whole snapshot stays a
-    dict of string sets: the improve-agent skill round-trips this through JSON with
-    `sorted()` on the way out and `set()` on the way back."""
+    `taken_at` è il limite su cui si basa il rifiuto del teardown: secondi epoch, lo stesso
+    orologio e la stessa troncatura con cui `created_at` della tabella degli apprendimenti viene scritto
+    (`int(time.time())`, nel processo che esegue l'agente — il processore eval stesso, in
+    entrambi i percorsi autorizzati). Viaggia in un insieme a un elemento così l'intero snapshot resta un
+    dict di insiemi di stringhe: la skill improve-agent lo passa attraverso JSON con
+    `sorted()` in uscita e `set()` al ritorno."""
     # The cutoff is read before the rows, never after — a row written between the two
     # would otherwise look older than the snapshot and trip the refusal for nothing.
     taken_at = int(time.time())
@@ -112,10 +115,10 @@ _MAX_SWEPT_LEARNINGS = 25
 
 
 def _snapshot_cutoff(pre_run: dict[str, set[str]]) -> int:
-    """The `taken_at` epoch second out of a learning snapshot.
+    """Il secondo epoch `taken_at` da uno snapshot di apprendimento.
 
-    A snapshot without exactly one is hand-built or from an older shape, and cannot carry
-    the refusal below. Say so rather than sweeping with the guard silently disabled."""
+    Uno snapshot senza esattamente uno è costruito a mano o di una forma precedente, e non può
+    trasportare il rifiuto qui sotto. Comunicalo invece di fare sweep con la protezione silenziosamente disattivata."""
     stamps = pre_run.get("taken_at") or set()
     if len(stamps) != 1:
         raise RuntimeError(
@@ -127,10 +130,10 @@ def _snapshot_cutoff(pre_run: dict[str, set[str]]) -> int:
 
 
 def delete_new_learning_state(pre_run: dict[str, set[str]], max_swept: int | None = None) -> None:
-    """Hard-deletes learnings (entities, profiles, memories) and notes that did not exist
-    before the case ran. Also used standalone by the improve-agent skill to bracket
-    probe loops against learning-store agents (uncapped there — a probe campaign
-    legitimately creates many rows)."""
+    """Elimina definitivamente gli apprendimenti (entità, profili, memorie) e le note che non esistevano
+    prima dell'esecuzione del caso. Usato anche autonomamente dalla skill improve-agent per
+    delimitare i cicli di sonda contro gli agenti con archivio di apprendimento (senza limite lì —
+    una campagna di sonde crea legittimamente molte righe)."""
     # Read before anything is deleted, so a snapshot of the wrong shape refuses first.
     taken_at = _snapshot_cutoff(pre_run)
     # Notes first: their snapshot cannot be silently empty (notes.list() raises on DB
@@ -168,16 +171,17 @@ def delete_new_learning_state(pre_run: dict[str, set[str]], max_swept: int | Non
 
 
 async def cleanup_new_learning_state(pre_run: dict[str, set[str]], result: CaseResult) -> None:
-    """`teardown` hook for cases whose run may write to the learning stores (capture is
-    ungated, so entities, memories, and notes really land in the DB). The runner invokes it
-    on pass, fail, error, and timeout alike, with the `setup` snapshot as context."""
+    """Hook di `teardown` per i casi la cui esecuzione può scrivere negli archivi di apprendimento
+    (la cattura non è bloccata, quindi entità, memorie e note atterrano veramente nel DB).
+    Il runner lo invoca su pass, fail, error e timeout allo stesso modo, con lo snapshot di
+    `setup` come contesto."""
     await _let_inflight_writes_land(result)
     await asyncio.to_thread(delete_new_learning_state, pre_run, _MAX_SWEPT_LEARNINGS)
 
 
 def snapshot_schedule_ids() -> set[str]:
-    """Schedule ids present before a builder case runs — the builder can create
-    schedules, and a case-created schedule left behind would fire daily."""
+    """Gli id degli schedule presenti prima dell'esecuzione di un caso builder — il builder può creare
+    schedule, e uno schedule creato dal caso lasciato indietro scatterebbe quotidianamente."""
     return {schedule.id for schedule in ScheduleManager(eval_db).list(limit=1000)}
 
 
@@ -196,8 +200,8 @@ _MAX_SWEPT_SCHEDULES = 5
 
 
 def delete_new_schedules(pre_run_ids: set[str]) -> None:
-    """Hard-deletes schedules that did not exist before the case ran, sparing the
-    template's own two."""
+    """Elimina definitivamente gli schedule che non esistevano prima dell'esecuzione del caso,
+    risparmiando i due del template."""
     manager = ScheduleManager(eval_db)
     schedules = manager.list(limit=1000)
     # A reserved-named schedule the snapshot doesn't know is ambiguous: either the
@@ -227,9 +231,9 @@ def delete_new_schedules(pre_run_ids: set[str]) -> None:
 
 
 def snapshot_builder_state() -> dict[str, Any]:
-    """`setup` hook for Studio-builder cases: Studio component ids, schedule ids, and
-    learning/note state — the builder carries the shared per-user profile/memory
-    stores, so a run can write learnings as well as components and schedules."""
+    """Hook di `setup` per i casi Studio-builder: gli id dei componenti Studio, gli id degli schedule,
+    e lo stato di apprendimento/note — il builder trasporta gli archivi condivisi di profilo/memoria
+    per utente, così un'esecuzione può scrivere apprendimenti oltre che componenti e schedule."""
     return {
         "component_ids": snapshot_component_ids(),
         "schedule_ids": snapshot_schedule_ids(),
@@ -238,8 +242,8 @@ def snapshot_builder_state() -> dict[str, Any]:
 
 
 def delete_new_builder_state(pre_run: dict[str, Any]) -> None:
-    """Hard-deletes components, schedules, and learning/note rows that did not exist
-    before the case ran."""
+    """Elimina definitivamente componenti, schedule e righe di apprendimento/note che non esistevano
+    prima dell'esecuzione del caso."""
     # Any sweep can refuse (see the caps) or hit a transient DB error; run each
     # regardless of how the others went, so one failure never strands another's rows.
     try:
@@ -252,8 +256,8 @@ def delete_new_builder_state(pre_run: dict[str, Any]) -> None:
 
 
 async def cleanup_new_builder_state(pre_run: dict[str, Any], result: CaseResult) -> None:
-    """`teardown` hook for builder cases: sweeps new components, schedules, and learning
-    rows alike. The runner invokes it on pass, fail, error, and timeout alike."""
+    """Hook di `teardown` per i casi builder: pulisce i nuovi componenti, schedule e righe
+    di apprendimento allo stesso modo. Il runner lo invoca su pass, fail, error e timeout allo stesso modo."""
     await _let_inflight_writes_land(result)
     await asyncio.to_thread(delete_new_builder_state, pre_run)
 

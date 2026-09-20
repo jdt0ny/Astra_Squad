@@ -1,9 +1,11 @@
 """
-AgentOS Registry
+Registro AgentOS
 ================
 
-The tools, functions, models, databases, and agents available to AgentOS Studio.
+Strumenti, funzioni, modelli, database e agenti disponibili per AgentOS Studio.
 """
+
+from __future__ import annotations
 
 from agno.registry import Registry
 from agno.tools.calculator import CalculatorTools

@@ -1,9 +1,11 @@
 """
-Deployment Check
-================
+Controllo di Deploy
+===================
 
-A reference workflow that checks if the AgentOS is wired correctly.
+Un workflow di riferimento che controlla se l'AgentOS è collegato correttamente.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from os import getenv
@@ -37,7 +39,7 @@ _POLLER_RUN_WINDOW = 5
 
 @dataclass(frozen=True)
 class CheckResult:
-    """One deployment readiness check."""
+    """Un controllo di readiness del deploy."""
 
     name: str
     status: str
@@ -93,7 +95,7 @@ def _check_runtime() -> CheckResult:
 
 
 def _check_openai_key() -> CheckResult:
-    """The one env var whose absence every other check survives."""
+    """L'unica variabile d'ambiente la cui assenza sopravvive a tutti gli altri controlli."""
     if getenv("OPENAI_API_KEY"):
         return _pass("OpenAI key", "Set — models, knowledge embeddings, and the registry's media tools.")
     return _fail(
@@ -117,11 +119,11 @@ def _check_agentos_url() -> CheckResult:
 
 
 async def _check_mcp() -> CheckResult:
-    """The MCP endpoint is the surface chat apps and coding agents depend on; a proxy
-    that strips or misroutes /mcp would otherwise pass every other check.
+    """L'endpoint MCP è la superficie da cui dipendono le app di chat e gli agenti di codifica; un proxy
+    che rimuove o instrada male /mcp altrimenti passerebbe tutti gli altri controlli.
 
-    Async on purpose: the workflow runs in-process, so a blocking self-request would
-    deadlock the event loop that has to serve it."""
+    Async di proposito: il workflow esegue in-process, quindi una richiesta bloccante a se stessa
+    creerebbe un deadlock nell'event loop che deve servirla."""
     mcp_url = getenv("AGENTOS_URL", "http://127.0.0.1:8000").rstrip("/") + "/mcp"
     payload = {
         "jsonrpc": "2.0",
@@ -189,16 +191,17 @@ def _check_reference_components() -> CheckResult:
 
 
 def _check_registry_resources() -> CheckResult:
-    """The registry entries built components hold by NAME rather than by reference.
+    """Le voci del registry che i componenti costruiti tengono per NOME invece che per riferimento.
 
-    A Studio-built component stores `{"name": "shared-learning"}` and resolves the live object
-    out of the registry on every load, so the name is the wiring. The run routes resolve
-    strict: a name that stopped being registered is a 422 on every run of every component
-    wired to it, and the lenient paths (history reads, cancel) are worse — they drop the
-    reference and hand back a component running without its self. The import check above
-    cannot see any of that, because app/registry.py imports perfectly cleanly with an
-    entry deleted from its lists. Two distinct instances claiming one name fail the same
-    way: strict rehydration refuses the ambiguity rather than guess which store to bind.
+    Un componente costruito con Studio memorizza `{"name": "shared-learning"}` e risolve l'oggetto live
+    dal registry ad ogni caricamento, quindi il nome è il collegamento. Le route di esecuzione risolvono
+    in modo rigido: un nome che ha smesso di essere registrato è un 422 ad ogni esecuzione di ogni componente
+    collegato ad esso, e i percorsi permissivi (letture della cronologia, cancellazione) sono peggio —
+    lasciano cadere il riferimento e restituiscono un componente che gira senza il suo io. Il controllo
+    di importazione qui sopra non può vedere nulla di tutto questo, perché app/registry.py importa perfettamente
+    in modo pulito con una voce cancellata dalle sue liste. Due istanze distinte che rivendicano lo stesso nome
+    falliscono allo stesso modo: la reidratazione rigida rifiuta l'ambiguità invece di indovinare quale archivio
+    legare.
     """
     try:
         from app.knowledge import KNOWLEDGE_NAME, PRODUCT_KNOWLEDGE_NAME
@@ -235,7 +238,7 @@ def _check_registry_resources() -> CheckResult:
 
 
 def _relative(epoch: int | None, now: int) -> str:
-    """A schedule timestamp as an age or a countdown — a bare epoch tells a reader nothing."""
+    """Un timestamp dello schedule come età o conto alla rovescia — un epoch nudo non dice nulla a un lettore."""
     if epoch is None:
         return "never"
     delta = abs(now - epoch)
@@ -249,23 +252,23 @@ def _relative(epoch: int | None, now: int) -> str:
 
 
 def _check_poller() -> CheckResult:
-    """Whether the scheduler poller is actually firing — evidence, not configuration.
+    """Se il poller dello scheduler sta effettivamente scattando — evidenza, non configurazione.
 
-    This is the only check that catches the failure AGENTOS_URL's doc row is written
-    about. The poller runs inside this process and reaches the app by calling back over
-    that URL, so on a topology where the URL does not resolve to this app the loop keeps
-    ticking, every other check keeps passing, and scheduled work silently stops. Both
-    halves of that leave a trace on the deployment check's own schedule:
+    Questo è l'unico controllo che cattura il fallimento che la riga di documentazione di AGENTOS_URL
+    descrive. Il poller gira all'interno di questo processo e raggiunge l'app richiamando quell'URL,
+    quindi su una topologia in cui l'URL non risolve verso questa app il loop continua
+    a ticchettare, ogni altro controllo continua a passare, e il lavoro programmato si ferma silenziosamente.
+    Entrambi i lati lasciano una traccia sullo schedule del controllo di deploy stesso:
 
-    - Not claiming. The poller claims any enabled schedule whose next_run_at has passed
-      and only then advances it, so an unlocked row overdue by more than a few ticks
-      means nothing is polling at all. A live poller self-corrects a stale next_run_at
-      within one tick, which is what makes the overdue reading trustworthy.
-    - Claiming but not arriving. agno's executor writes a schedule_runs row *before* it
-      makes the HTTP call, so an unreachable callback lands as a `failed` row carrying
-      the transport error — the row's existence is itself proof the poller got that far.
+    - Non reclama. Il poller reclama qualsiasi schedule abilitato il cui next_run_at è passato
+      e solo dopo lo avanza, quindi una riga sbloccata in ritardo di più di qualche tick
+      significa che nulla sta facendo polling. Un poller live autocorregge un next_run_at obsoleto
+      entro un tick, il che rende la lettura in ritardo affidabile.
+    - Reclama ma non arriva. L'esecutore di agno scrive una riga schedule_runs *prima* che
+      faccia la chiamata HTTP, quindi una callback irraggiungibile atterra come una riga `failed` con
+      l'errore di trasporto — l'esistenza della riga stessa è prova che il poller è arrivato fin lì.
 
-    Free and deterministic: two small reads, no model call, no mutation.
+    Gratuito e deterministico: due piccole letture, nessuna chiamata al modello, nessuna mutazione.
     """
     try:
         row = get_postgres_db().get_schedule_by_name("deployment-check")
@@ -362,7 +365,7 @@ def _format_report(checks: list[CheckResult]) -> str:
 
 
 async def deployment_check_step(_step_input: StepInput) -> StepOutput:
-    """Run deterministic deployment readiness checks and return a report."""
+    """Esegue controlli deterministici di readiness del deploy e restituisce un rapporto."""
     checks = [
         _check_database(),
         _check_runtime(),

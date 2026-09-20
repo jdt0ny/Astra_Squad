@@ -1,11 +1,18 @@
 """
-Shared Learnings
-==================
+Apprendimenti Condivisi
+========================
 
-A shared learning machine that lets the platform learn about the users.
+Una macchina di apprendimento condivisa che permette alla piattaforma di imparare sugli utenti.
 """
 
-from agno.learn import LearningMachine, LearningMode, UserMemoryConfig, UserProfileConfig
+from __future__ import annotations
+
+from agno.learn import (
+    LearningMachine,
+    LearningMode,
+    UserMemoryConfig,
+    UserProfileConfig,
+)
 
 from app.settings import default_model
 from db import get_postgres_db
